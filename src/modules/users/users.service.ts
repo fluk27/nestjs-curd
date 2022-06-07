@@ -4,6 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from './entities/user.entity';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt'
 @Injectable()
 export class UsersService {
   constructor(
@@ -11,15 +12,21 @@ export class UsersService {
     private readonly userRepo: Repository<Users>,
   ) {}
   async create(createUserDto: CreateUserDto) {
-    const result = await this.checkUserDuplicate(createUserDto.firstName);
+    const result = await this.checkUserDuplicate(createUserDto.username);
 
     if (result) {
       try {
-        const {firstName,lastName}=createUserDto
-        const dataUser = await this.userRepo.save({firstName,lastName});
+        const {firstName,lastName,username,password,isActive}=createUserDto
+    const hashPassword= await bcrypt.hash(password, 10)
+        const dataUser = await this.userRepo.save({
+          firstName:firstName,
+          lastName:lastName,
+          username:username,
+          isActive:isActive,
+          password:hashPassword});
         return {
           status: true,
-          data: dataUser,
+          data: dataUser.id,
           massages: 'create user successfully!',
         };
       } catch (error) {
@@ -30,7 +37,7 @@ export class UsersService {
         };
       }
     } else {
-      throw new HttpException('user fristName duplicate', HttpStatus.CONFLICT);
+      throw new HttpException('username duplicate', HttpStatus.CONFLICT);
     }
   }
 
@@ -106,14 +113,20 @@ export class UsersService {
      
     }
   }
-  async checkUserDuplicate(firstName: string): Promise<boolean> {
+  async checkUserDuplicate(username: string): Promise<boolean> {
     const dataUser = await this.userRepo.findOne({
-      where: { firstName: firstName },
+      where: { username: username },
     })
     if (dataUser) {
       return false;
     } else {
       return true;
     }
+  }
+  async checkUser(username: string): Promise<any> {
+    return await this.userRepo.findOne({
+      where: { username: username },
+    })
+   
   }
 }
