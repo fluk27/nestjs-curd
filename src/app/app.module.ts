@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from '../modules/users/users.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { TasksModule } from '../modules/tasks/tasks.module';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { AuthModule } from 'src/auth/auth.module';
       entities: ['dist/**/*.entity{.ts,.js}'],
       synchronize: true,
     }),
-    UsersModule,AuthModule
+    UsersModule,AuthModule,TasksModule
   ],
   controllers: [AppController],
   providers: [AppService],

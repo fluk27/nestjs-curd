@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
   constructor(
@@ -16,17 +16,19 @@ export class UsersService {
 
     if (result) {
       try {
-        const {firstName,lastName,username,password,isActive}=createUserDto
-    const hashPassword= await bcrypt.hash(password, 10)
+        const { firstName, lastName, username, password, isActive } =
+          createUserDto;
+        const hashPassword = await bcrypt.hash(password, 10);
         const dataUser = await this.userRepo.save({
-          firstName:firstName,
-          lastName:lastName,
-          username:username,
-          isActive:isActive,
-          password:hashPassword});
+          firstName: firstName,
+          lastName: lastName,
+          username: username,
+          isActive: isActive,
+          password: hashPassword,
+        });
         return {
           status: true,
-          data: dataUser.id,
+          data: dataUser,
           massages: 'create user successfully!',
         };
       } catch (error) {
@@ -91,32 +93,42 @@ export class UsersService {
     }
   }
 
-  async update(uuid: string, updateUserDto: UpdateUserDto):Promise<Users> {
-   const dataUser= await this.userRepo.findOne({where:{id:uuid}})
-   if (dataUser) {
-      dataUser.firstName=updateUserDto.firstName
-      dataUser.lastName=updateUserDto.lastName
-    return await this.userRepo.save(dataUser)
-   }else{
-    throw new HttpException('data user empty',HttpStatus.UNPROCESSABLE_ENTITY)
-    
-   }
+  async update(uuid: string, updateUserDto: UpdateUserDto): Promise<Users> {
+    const dataUser = await this.userRepo.findOne({ where: { id: uuid } });
+    if (dataUser) {
+      const hashPassword = await bcrypt.hash(updateUserDto.password, 10);
+      const dataEdit = {
+        id: dataUser.id,
+        firstName: updateUserDto.firstName,
+        lastName: updateUserDto.lastName,
+        username: updateUserDto.username,
+        isActive: updateUserDto.isActive,
+        password: hashPassword,
+      };
+      return await this.userRepo.save(dataEdit);
+    } else {
+      throw new HttpException(
+        'data user empty',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
   }
 
   async remove(uuid: string) {
-    const dataUser= await this.userRepo.findOne({where:{id:uuid}})
+    const dataUser = await this.userRepo.findOne({ where: { id: uuid } });
     if (dataUser) {
-    
-     return await this.userRepo.delete(uuid)
-    }else{
-     throw new HttpException('data user empty',HttpStatus.UNPROCESSABLE_ENTITY)
-     
+      return await this.userRepo.delete(uuid);
+    } else {
+      throw new HttpException(
+        'data user empty',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
     }
   }
   async checkUserDuplicate(username: string): Promise<boolean> {
     const dataUser = await this.userRepo.findOne({
       where: { username: username },
-    })
+    });
     if (dataUser) {
       return false;
     } else {
@@ -126,7 +138,6 @@ export class UsersService {
   async checkUser(username: string): Promise<any> {
     return await this.userRepo.findOne({
       where: { username: username },
-    })
-   
+    });
   }
 }
