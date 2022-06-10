@@ -1,42 +1,58 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { Repository, Connection } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { Task } from '../tasks/entities/task.entity';
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly userRepo: Repository<Users>,
+    private readonly connection: Connection,
   ) {}
   async create(createUserDto: CreateUserDto) {
     const result = await this.checkUserDuplicate(createUserDto.username);
 
     if (result) {
+      const queryrunner = this.connection.createQueryRunner();
+      await queryrunner.connect();
+      await queryrunner.startTransaction();
+
       try {
         const { firstName, lastName, username, password, isActive } =
           createUserDto;
         const hashPassword = await bcrypt.hash(password, 10);
-        const dataUser = await this.userRepo.save({
+        const dataUser = await queryrunner.manager.save(Users, {
           firstName: firstName,
           lastName: lastName,
           username: username,
           isActive: isActive,
           password: hashPassword,
         });
+        await queryrunner.commitTransaction();
         return {
           status: true,
           data: dataUser,
           massages: 'create user successfully!',
         };
       } catch (error) {
+        await queryrunner.rollbackTransaction();
         Logger.error(error);
         return {
           status: false,
           massages: 'create user fail!',
         };
+      } finally {
+        await queryrunner.release();
       }
     } else {
       throw new HttpException('username duplicate', HttpStatus.CONFLICT);
@@ -45,7 +61,7 @@ export class UsersService {
 
   async findAll() {
     try {
-      return await this.userRepo.find();
+      return await this.userRepo.find({ relations: ['task'] });
     } catch (error) {
       throw new HttpException(
         'fine all user fail!',
@@ -105,7 +121,18 @@ export class UsersService {
         isActive: updateUserDto.isActive,
         password: hashPassword,
       };
-      return await this.userRepo.save(dataEdit);
+      const queryrunner = this.connection.createQueryRunner();
+      await queryrunner.connect();
+      await queryrunner.startTransaction();
+      try {
+        return await queryrunner.manager.save(Users, dataEdit);
+      } catch (error) {
+        Logger.error(error.toString());
+        await queryrunner.rollbackTransaction();
+        throw new InternalServerErrorException('service user fail.');
+      } finally {
+        await queryrunner.release();
+      }
     } else {
       throw new HttpException(
         'data user empty',
@@ -117,7 +144,16 @@ export class UsersService {
   async remove(uuid: string) {
     const dataUser = await this.userRepo.findOne({ where: { id: uuid } });
     if (dataUser) {
-      return await this.userRepo.delete(uuid);
+      const queryrunner = this.connection.createQueryRunner();
+      await queryrunner.connect();
+      await queryrunner.startTransaction();
+      try {
+        return await queryrunner.manager.delete(Users, uuid);
+      } catch (error) {
+        await queryrunner.rollbackTransaction();
+      } finally {
+        await queryrunner.release();
+      }
     } else {
       throw new HttpException(
         'data user empty',

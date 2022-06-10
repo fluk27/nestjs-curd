@@ -1,15 +1,31 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, } from '@nestjs/common';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Task } from './entities/task.entity';
+import { Repository } from 'typeorm';
+import { Users } from '../users/entities/user.entity';
 
 @Injectable()
 export class TasksService {
-  create(createTaskDto: CreateTaskDto) {
-    return 'This action adds a new task';
+  constructor(
+    @InjectRepository(Task)
+    private readonly taskRepo: Repository<Task>,
+  ){
+
+  }
+ async create(createTaskDto: CreateTaskDto,users:Users) {
+  const{title,description}=createTaskDto
+   const task= await this.taskRepo.create({title,description,users})
+   try {
+    return await this.taskRepo.save(task)
+   } catch (error) {
+  throw new InternalServerErrorException('server fail!')
+   }
   }
 
-  findAll() {
-    return `This action returns all tasks`;
+ async findAll(users:Users) {
+    return await this.taskRepo.find({where:{users}})
   }
 
   findOne(id: number) {

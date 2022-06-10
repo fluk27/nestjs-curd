@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, HttpCode, HttpStatus, UseGuards} from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, HttpCode, HttpStatus, UseGuards, UseInterceptors} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../../auth/jwt/jwt-auth.guard';
+import { UserInterceptor } from '../../Interceptor/user.interceptor';
 
 @Controller('users')
 export class UsersController {
@@ -16,6 +17,7 @@ export class UsersController {
   signin(@Body() createUserDto: CreateUserDto) {
    return  this.usersService.create(createUserDto);
   }
+  @UseInterceptors(UserInterceptor)
 @UseGuards(JwtAuthGuard)
   @Get()
   findAll() {
