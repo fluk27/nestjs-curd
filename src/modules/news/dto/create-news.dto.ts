@@ -38,8 +38,7 @@ export class CreateNewsDto {
   })
   detail: string;
   @IsOptional()
-  @IsArray()
-  oldFilesId?: number[] | string[];
+  oldFilesId?:string[]|number[]
   @IsNotEmpty()
   isPublish: Boolean | string;
   @IsNotEmpty()

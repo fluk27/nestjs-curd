@@ -10,11 +10,13 @@ import {
   UploadedFiles,
   BadRequestException,
   Put,
+  HttpCode,
 } from '@nestjs/common';
 import { NewsService } from './news.service';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { HttpStatus } from '@nestjs/common';
 
 @Controller('news')
 export class NewsController {
@@ -22,15 +24,13 @@ export class NewsController {
   @Post()
   @UseInterceptors(FilesInterceptor('images', 20))
   create(@UploadedFiles() files, @Body() createNewsDto: CreateNewsDto) {
-    let filename:string[]=[]
-    if (files.length>0) {
-     
-    files.map((e)=>{
-      filename.push(e.filename)
-    })
-  
+    let filename: string[] = [];
+    if (files.length > 0) {
+      files.map((e) => {
+        filename.push(e.filename);
+      });
     }
-    return this.newsService.create(createNewsDto,filename);
+    return this.newsService.create(createNewsDto, filename);
   }
 
   @Get()
@@ -44,26 +44,26 @@ export class NewsController {
   }
   @Put(':id')
   @UseInterceptors(FilesInterceptor('images', 20))
-  update(@Param('id') id: string, @UploadedFiles() files, @Body() updateNewsDto: UpdateNewsDto) {
-    let filename:string[]=[]
-    if (files.length>0) {
-     
-    files.map((e)=>{
-      filename.push(e.filename)
-    })
-  
+  update(
+    @Param('id') id: string,
+    @UploadedFiles() files,
+    @Body() updateNewsDto: UpdateNewsDto,
+  ) {
+    let filename: string[] = [];
+    if (files.length > 0) {
+      files.map((e) => {
+        filename.push(e.filename);
+      });
     }
-    return this.newsService.update(+id, updateNewsDto,filename);
+    return this.newsService.update(+id, updateNewsDto, filename);
   }
-
+  @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
   remove(@Param('id') id: string) {
-   
-   if (!isNaN(parseInt(id)) ) {
-    
-     return this.newsService.remove(parseInt(id));
-   }else{
-    throw new BadRequestException('id Is numberic only.')
-   }
+    if (!isNaN(parseInt(id))) {
+      return this.newsService.remove(parseInt(id));
+    } else {
+      throw new BadRequestException('id Is numberic only.');
+    }
   }
 }
