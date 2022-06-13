@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsDate,
   IsDateString,
@@ -36,6 +37,9 @@ export class CreateNewsDto {
     message: 'detail is english and numberic  only.',
   })
   detail: string;
+  @IsOptional()
+  @IsArray()
+  oldFilesId?: number[] | string[];
   @IsNotEmpty()
   isPublish: Boolean | string;
   @IsNotEmpty()

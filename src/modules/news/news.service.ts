@@ -97,21 +97,25 @@ export class NewsService {
       try {
         const resultEdit = await qr.manager.save(News, datas);
         if (FileNameNews.length > 0) {
-          const resultFile = await this.fileRepo.findOne({
-            where: { id: resultEdit.id },
-          });
-          if (resultFile) {
-          await  this.fileRepo
-              .createQueryBuilder('file')
-              .delete()
-              .where('file.newsId=:id', { id : resultEdit.id }).execute()
-              FileNameNews.map(async (e) => {
-                await this.fileRepo.save({
-                  fileName: e,
-                  news: resultEdit,
+          if (updateNewsDto.oldFilesId!== undefined) {
+            const resultFile = await this.fileRepo
+            .createQueryBuilder('file') 
+            .where('file.newsId=:id', { id : resultEdit.id })
+            .getOne()
+            if (resultFile) {
+            await  this.fileRepo
+                .createQueryBuilder('file')
+                .delete()
+                .where('file.newsId=:id', { id : 25 }).execute()
+                FileNameNews.map(async (e) => {
+                  await this.fileRepo.save({
+                    fileName: e,
+                    news: resultEdit,
+                  });
                 });
-              });
+            }
           } else {
+            
             FileNameNews.map(async (e) => {
               await this.fileRepo.save({
                 fileName: e,
@@ -134,9 +138,6 @@ export class NewsService {
 
   async remove(id: number) {
     const resultNews = await this.newRepo.findOne({ where: { id } });
-    console.log('====================================');
-    console.log('resultNews:', resultNews);
-    console.log('====================================');
     if (resultNews) {
       const qr = this.connection.createQueryRunner();
       await qr.connect();
