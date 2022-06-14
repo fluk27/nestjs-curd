@@ -4,9 +4,11 @@ import { NewsController } from './news.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { News } from './entities/news.entity';
 import { FilesNews } from './entities/file.entity';
+import { HelpersMinioModule } from '../helpers/minio/minio.module';
+
 
 @Module({
-  imports:[TypeOrmModule.forFeature([News,FilesNews])],
+  imports:[TypeOrmModule.forFeature([News,FilesNews]),HelpersMinioModule],
   controllers: [NewsController],
   providers: [NewsService]
 })

@@ -11,7 +11,8 @@ import { UpdateNewsDto } from './dto/update-news.dto';
 import { News } from './entities/news.entity';
 import { Repository, Connection, In } from 'typeorm';
 import { FilesNews } from './entities/file.entity';
-import * as fs from 'fs';
+import { BufferedFile } from '../helpers/minio/file.model';
+import { HelpersMinioService } from '../helpers/minio/minio.service';
 @Injectable()
 export class NewsService {
   constructor(
@@ -20,8 +21,9 @@ export class NewsService {
     @InjectRepository(FilesNews)
     private fileRepo: Repository<FilesNews>,
     private readonly connection: Connection,
+    private readonly HMS: HelpersMinioService,
   ) {}
-  async create(createNewsDto: CreateNewsDto, fileNameNews: string[]) {
+  async create(createNewsDto: CreateNewsDto, fileNameNews: BufferedFile[]) {
     let { subtitle, detail } = createNewsDto;
     if (subtitle === undefined) {
       subtitle = detail.length >= 20 ? detail.slice(0, 20) : detail;
@@ -46,10 +48,12 @@ export class NewsService {
       await queryrunner.commitTransaction();
       if (fileNameNews.length > 0) {
         fileNameNews.map(async (e) => {
+          e.fileName = `${new Date().getTime()}-${e.originalname}`;
           await this.fileRepo.save({
-            fileName: e,
+            fileName: e.fileName,
             news: resultStore,
           });
+          await this.HMS.uploadFile('news', e);
         });
       }
       return resultStore;
@@ -71,12 +75,12 @@ export class NewsService {
   async update(
     id: number,
     updateNewsDto: UpdateNewsDto,
-    FileNameNews: string[],
+    fileNameNews: BufferedFile[],
   ) {
     const resultNews = await this.newRepo.findOne({ where: { id } });
     if (resultNews) {
-      const qr =  this.connection.createQueryRunner();
-    
+      const qr = this.connection.createQueryRunner();
+
       let { subtitle, detail } = updateNewsDto;
       if (subtitle === undefined) {
         subtitle = detail.length >= 20 ? detail.slice(0, 20) : detail;
@@ -99,37 +103,36 @@ export class NewsService {
         const resultEdit = await qr.manager.save(News, datas);
         await qr.commitTransaction();
         if (updateNewsDto.oldFilesId !== undefined) {
-          updateNewsDto.oldFilesId.map(e=>{
-            Number(e)
-          })
-          const resultFile = await this.fileRepo.createQueryBuilder('file')
-          .where('file.Id IN(:...id)',{id:updateNewsDto.oldFilesId})
-          .getMany()
+          updateNewsDto.oldFilesId.map((e) => {
+            Number(e);
+          });
+          const resultFile = await this.fileRepo
+            .createQueryBuilder('file')
+            .where('file.Id IN(:...id)', { id: updateNewsDto.oldFilesId })
+            .getMany();
           if (resultFile) {
-            resultFile.map( async(e)=> {
-              await fs.unlink(`./upload/${e.fileName}`,(err) => {
-                if (err) {
-                 console.error(err);
-                 return err;
-                }
-               });
-            })
-        //  resultFile.map(async (e)=>{
-          await  this.fileRepo.remove(resultFile)
-        //  })
+            resultFile.map(async (e) => {
+              await this.HMS.DeleteFile('news', e.fileName);
+            });
+            //  resultFile.map(async (e)=>{
+            await this.fileRepo.remove(resultFile);
+            //  })
           }
         }
-          
-          if (FileNameNews.length > 0) {
-              FileNameNews.map(async (e) => {
-                await this.fileRepo.save({
-                  fileName: e,
-                  news: resultEdit,
-                });
+
+        if (fileNameNews.length > 0) {
+          fileNameNews.map(async (e) => {
+            fileNameNews.map(async (e) => {
+              e.fileName = `${new Date().getTime()}-${e.originalname}`;
+              await this.fileRepo.save({
+                fileName: e.fileName,
+                news: resultEdit,
               });
-            
-          }
-        
+              await this.HMS.uploadFile('news', e);
+            });
+          });
+        }
+
         return resultEdit;
       } catch (error) {
         await qr.rollbackTransaction();
@@ -142,7 +145,10 @@ export class NewsService {
   }
 
   async remove(id: number) {
-    const resultNews = await this.newRepo.findOne({ where: { id },relations:['files'] })
+    const resultNews = await this.newRepo.findOne({
+      where: { id },
+      relations: ['files'],
+    });
     if (resultNews) {
       const qr = this.connection.createQueryRunner();
       await qr.connect();
@@ -151,20 +157,15 @@ export class NewsService {
         await qr.manager.delete(News, id);
         await qr.commitTransaction();
       } catch (error) {
-        console.error("error:",error.toString());
-        
+        console.error('error:', error.toString());
+
         await qr.rollbackTransaction();
       } finally {
         await qr.release();
-        if (resultNews.files.length>0) {
-          resultNews.files.map( async(e)=> {
-            await fs.unlink(`./upload/${e.fileName}`,(err) => {
-              if (err) {
-               console.error(err);
-               return err;
-              }
-             });
-          })
+        if (resultNews.files.length > 0) {
+          resultNews.files.map(async (e) => {
+            await this.HMS.DeleteFile('news', e.fileName);
+          });
         }
       }
     } else {
