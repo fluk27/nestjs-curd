@@ -3,7 +3,7 @@
 /upload
 /dist
 /node_modules
-
+/docker
 # Logs
 logs
 *.log
