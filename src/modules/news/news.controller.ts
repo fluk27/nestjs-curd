@@ -21,6 +21,7 @@ import { HttpStatus } from '@nestjs/common';
 import { imagefilter } from './images.filter';
 import { HelpersMinioService } from '../helpers/minio/minio.service';
 import { BufferedFile } from '../helpers/minio/file.model';
+import { NewsInterceptor } from 'src/Interceptor/news.interceptor';
 // 20 mb
 const Filesize:number=1048576*20
 const maxcount:number= 3
@@ -43,8 +44,8 @@ export class NewsController {
      return this.newsService.create(createNewsDto, files);
         
   }
-
   @Get()
+  @UseInterceptors(NewsInterceptor)
   findAll() {
     return this.newsService.findAll();
   }

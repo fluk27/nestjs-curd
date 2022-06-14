@@ -1,10 +1,9 @@
 import {
   Injectable,
   NotFoundException,
-  HttpCode,
-  HttpStatus,
-  Logger,
+  BadRequestException,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
@@ -69,7 +68,15 @@ export class NewsService {
   }
 
   async findOne(id: number) {
-    return await this.newRepo.findOne({ where: { id }, relations: ['files'] });
+    const resultNew = await this.newRepo.findOne({
+      where: { id },
+      relations: ['files'],
+    });
+    if (resultNew) {
+      return resultNew;
+    } else {
+       throw new BadRequestException(`data news by id ${id} is empty.`);
+    }
   }
 
   async update(

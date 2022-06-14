@@ -7,7 +7,4 @@ export const imagefilter=(req:any, file:any, callback:any)=> {
     file.fileName=`${new Date().getTime()}-${file.originalname}`
     callback(null,true)
    }
-  console.log("fileSize:",file);
-  
- 
 }

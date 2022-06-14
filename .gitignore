@@ -1,5 +1,5 @@
 # compiled output
-/*.spec.ts
+*.spec.ts
 /upload
 /dist
 /node_modules
